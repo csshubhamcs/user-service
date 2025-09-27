@@ -1,0 +1,25 @@
+stages:
+  - build
+  - package
+
+build:
+  stage: build
+  image: gradle:8-jdk17
+  script:
+    - chmod +x gradlew
+    - ./gradlew build
+  artifacts:
+    paths:
+      - build/libs/*.jar
+
+package:
+  stage: package
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE:latest .
+    - docker push $CI_REGISTRY_IMAGE:latest
+  only:
+    - master
