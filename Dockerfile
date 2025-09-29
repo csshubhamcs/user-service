@@ -7,10 +7,9 @@ COPY . .
 RUN chmod +x gradlew
 RUN ./gradlew bootJar
 
-# Copy the JAR with a fixed name
-RUN cp build/libs/*.jar app.jar
+# Copy only the executable JAR (not the plain one)
+RUN cp build/libs/*-SNAPSHOT.jar app.jar
 
 EXPOSE 7501
 
-# Use fixed JAR name
 CMD ["java", "-jar", "app.jar"]
