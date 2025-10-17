@@ -1,35 +1,30 @@
+variables:
+  MAJOR: "1"
+  MINOR: "0"
+  VERSION: "v${MAJOR}.${MINOR}.${CI_PIPELINE_IID}"
+  IMAGE_NAME: "$CI_REGISTRY_IMAGE:$VERSION"
+
 stages:
   - build
-  - package
-
-variables:
-  VERSION: "1.0.${CI_PIPELINE_ID}"
+  - docker
 
 build:
   stage: build
-  image: gradle:8-jdk17-alpine
+  image: eclipse-temurin:17-jdk
   script:
-    - echo "Building user-service version ${VERSION}"
-    - chmod +x gradlew
-    - ./gradlew clean build -x test
-  artifacts:
-    paths:
-      - build/libs/*.jar
+    - ./gradlew build -x test
+  only:
+    - branches
 
-package:
-  stage: package
-  image: docker:24
+docker-build:
+  stage: docker
+  image: docker:latest
   services:
-    - docker:24-dind
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker:dind
   script:
-    - docker build -t $CI_REGISTRY_IMAGE:$VERSION -t $CI_REGISTRY_IMAGE:latest .
-    - docker push $CI_REGISTRY_IMAGE:$VERSION
-    - docker push $CI_REGISTRY_IMAGE:latest
-    - echo "Pushed version $VERSION and latest"
-  dependencies:
-    - build
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $IMAGE_NAME .
+    - docker push $IMAGE_NAME
+    - echo "Built version $VERSION"
   only:
     - master
-    - main
