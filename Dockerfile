@@ -1,15 +1,10 @@
-FROM bellsoft/liberica-openjdk-alpine-musl:17
-
+FROM eclipse-temurin:17-jdk-alpine AS build
 WORKDIR /app
-
 COPY . .
+RUN ./gradlew build -x test
 
-RUN chmod +x gradlew
-RUN ./gradlew bootJar
-
-# Copy only the executable JAR (not the plain one)
-RUN cp build/libs/*-SNAPSHOT.jar app.jar
-
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 7501
-
-CMD ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
