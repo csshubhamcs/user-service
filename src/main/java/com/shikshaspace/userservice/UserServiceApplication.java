@@ -1,4 +1,4 @@
-package com.shikshaspace.user_service;
+package com.shikshaspace.userservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
