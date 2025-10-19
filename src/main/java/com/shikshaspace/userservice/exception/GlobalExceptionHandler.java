@@ -1,90 +1,160 @@
 package com.shikshaspace.userservice.exception;
 
-import com.shikshaspace.userservice.dto.response.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
-import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.ServerWebInputException;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Global exception handler for reactive REST APIs
+ * Handles security, validation, and runtime exceptions
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUserNotFoundException(
-            UserNotFoundException ex,
-            ServerWebExchange exchange) {
-
-        log.error("User not found: {}", ex.getMessage());
-
-        ErrorResponse error = ErrorResponse.builder()
-                .error("USER_NOT_FOUND")
-                .message(ex.getMessage())
-                .status(HttpStatus.NOT_FOUND.value())
-                .timestamp(LocalDateTime.now())
-                .path(exchange.getRequest().getPath().value())
-                .build();
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    /**
+     * Handle Spring Security 6 AuthorizationDeniedException
+     * Thrown when @PreAuthorize fails (e.g., missing ADMIN role)
+     */
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public Mono<ResponseEntity<Map<String, Object>>> handleAuthorizationDenied(
+            AuthorizationDeniedException ex) {
+        log.warn("Authorization denied: {}", ex.getMessage());
+        return createErrorResponse(
+                HttpStatus.FORBIDDEN,
+                "FORBIDDEN",
+                "Access denied. Insufficient permissions."
+        );
     }
 
-    @ExceptionHandler(KeycloakException.class)
-    public ResponseEntity<ErrorResponse> handleKeycloakException(
-            KeycloakException ex,
-            ServerWebExchange exchange) {
-
-        log.error("Keycloak error: {}", ex.getMessage(), ex);
-
-        ErrorResponse error = ErrorResponse.builder()
-                .error("KEYCLOAK_ERROR")
-                .message(ex.getMessage())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .timestamp(LocalDateTime.now())
-                .path(exchange.getRequest().getPath().value())
-                .build();
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    /**
+     * Handle legacy AccessDeniedException (Spring Security 5 compatibility)
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public Mono<ResponseEntity<Map<String, Object>>> handleAccessDenied(
+            AccessDeniedException ex) {
+        log.warn("Access denied: {}", ex.getMessage());
+        return createErrorResponse(
+                HttpStatus.FORBIDDEN,
+                "FORBIDDEN",
+                "Access denied. Insufficient permissions."
+        );
     }
 
+    /**
+     * Handle authentication failures (invalid/missing JWT token)
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public Mono<ResponseEntity<Map<String, Object>>> handleAuthenticationException(
+            AuthenticationException ex) {
+        log.warn("Authentication failed: {}", ex.getMessage());
+        return createErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "Authentication required. Please provide a valid token."
+        );
+    }
+
+    /**
+     * Handle validation errors (@Valid annotation failures)
+     */
     @ExceptionHandler(WebExchangeBindException.class)
-    public ResponseEntity<Map<String, String>> handleValidationException(
+    public Mono<ResponseEntity<Map<String, Object>>> handleValidationErrors(
             WebExchangeBindException ex) {
-
         log.error("Validation error: {}", ex.getMessage());
 
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", "VALIDATION_ERROR");
+        errorResponse.put("message", "Invalid request data");
+        errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+        errorResponse.put("timestamp", LocalDateTime.now().toString());
+        errorResponse.put("errors", ex.getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .toList());
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+        return Mono.just(ResponseEntity.badRequest().body(errorResponse));
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(
-            Exception ex,
-            ServerWebExchange exchange) {
+    /**
+     * Handle malformed request body
+     */
+    @ExceptionHandler(ServerWebInputException.class)
+    public Mono<ResponseEntity<Map<String, Object>>> handleServerWebInputException(
+            ServerWebInputException ex) {
+        log.error("Invalid request: {}", ex.getMessage());
+        return createErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "BAD_REQUEST",
+                "Invalid request format"
+        );
+    }
 
+    /**
+     * Handle custom application exceptions
+     */
+    @ExceptionHandler(KeycloakException.class)
+    public Mono<ResponseEntity<Map<String, Object>>> handleKeycloakException(
+            KeycloakException ex) {
+        log.error("Keycloak error: {}", ex.getMessage());
+        return createErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "KEYCLOAK_ERROR",
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public Mono<ResponseEntity<Map<String, Object>>> handleResourceNotFound(
+            ResourceNotFoundException ex) {
+        log.warn("Resource not found: {}", ex.getMessage());
+        return createErrorResponse(
+                HttpStatus.NOT_FOUND,
+                "NOT_FOUND",
+                ex.getMessage()
+        );
+    }
+
+    /**
+     * Handle all other unexpected exceptions
+     * This is the catch-all handler (must be last)
+     */
+    @ExceptionHandler(Exception.class)
+    public Mono<ResponseEntity<Map<String, Object>>> handleGenericException(Exception ex) {
+        // Only log if not already handled by specific handlers above
         log.error("Unexpected error: {}", ex.getMessage(), ex);
 
-        ErrorResponse error = ErrorResponse.builder()
-                .error("INTERNAL_SERVER_ERROR")
-                .message("An unexpected error occurred")
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .timestamp(LocalDateTime.now())
-                .path(exchange.getRequest().getPath().value())
-                .build();
+        return createErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "INTERNAL_SERVER_ERROR",
+                "An unexpected error occurred"
+        );
+    }
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    /**
+     * Helper method to create consistent error responses
+     */
+    private Mono<ResponseEntity<Map<String, Object>>> createErrorResponse(
+            HttpStatus status,
+            String error,
+            String message) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", error);
+        errorResponse.put("message", message);
+        errorResponse.put("status", status.value());
+        errorResponse.put("timestamp", LocalDateTime.now().toString());
+
+        return Mono.just(ResponseEntity.status(status).body(errorResponse));
     }
 }

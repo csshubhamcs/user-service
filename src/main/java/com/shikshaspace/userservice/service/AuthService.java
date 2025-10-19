@@ -15,6 +15,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -65,5 +67,31 @@ public class AuthService {
                 .bodyToMono(TokenResponse.class)
                 .doOnSuccess(token -> log.info("User logged in: {}", request.getUsername()))
                 .doOnError(e -> log.error("Login failed for user: {}", request.getUsername(), e));
+    }
+
+    /**
+     * Refresh access token using refresh token
+     */
+    public Mono<TokenResponse> refreshAccessToken(String refreshToken) {
+        log.info("Refreshing access token");
+
+        String tokenUrl = keycloakServerUrl + "/realms/" + realm + "/protocol/openid-connect/token";
+
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        formData.add("grant_type", "refresh_token");
+        formData.add("client_id", clientId);
+        formData.add("client_secret", clientSecret);
+        formData.add("refresh_token", refreshToken);
+
+        return webClientBuilder.build()
+                .post()
+                .uri(tokenUrl)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .bodyValue(formData)
+                .retrieve()
+                .bodyToMono(TokenResponse.class)
+                .timeout(Duration.ofSeconds(10))
+                .doOnSuccess(response -> log.info("Access token refreshed successfully"))
+                .doOnError(error -> log.error("Failed to refresh token: {}", error.getMessage()));
     }
 }
