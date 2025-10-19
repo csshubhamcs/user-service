@@ -25,7 +25,7 @@ public class UserController {
     private final UserMapper userMapper;
 
     @GetMapping
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Flux<UserResponse> getAllUsers() {
         log.debug("Fetching all users");
         return userService.getAllUsers()
