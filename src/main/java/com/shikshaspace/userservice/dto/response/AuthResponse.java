@@ -17,4 +17,5 @@ public class AuthResponse {
     private Long expiresIn;         // expires_in from Keycloak
     private UUID userId;            // from database
     private String username;        // from database
+    private String email;
 }

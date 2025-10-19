@@ -54,6 +54,7 @@ public class AuthService {
                                     .expiresIn(tokenResponse.getExpiresIn())
                                     .userId(user.getId())
                                     .username(user.getUsername())
+                                    .email(user.getEmail())
                                     .build());
                 });
     }
@@ -73,6 +74,7 @@ public class AuthService {
                                         .expiresIn(tokenResponse.getExpiresIn())
                                         .userId(user.getId())
                                         .username(user.getUsername())
+                                        .email(user.getEmail())
                                         .build())
                                 .doOnSuccess(response -> log.info("User logged in: {}", request.getUsername()))
                                 .doOnError(e -> log.error("Login failed for user: {}", request.getUsername(), e))
