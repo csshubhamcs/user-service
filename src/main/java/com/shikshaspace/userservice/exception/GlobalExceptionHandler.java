@@ -9,6 +9,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
 
@@ -127,12 +128,48 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle WebClient 401 Unauthorized from Keycloak
+     * This catches authentication failures when calling Keycloak token endpoint
+     * MUST come before generic WebClientResponseException handler
+     */
+    @ExceptionHandler(WebClientResponseException.Unauthorized.class)
+    public Mono<ResponseEntity<Map<String, Object>>> handleWebClientUnauthorized(
+            WebClientResponseException.Unauthorized ex) {
+        log.warn("Authentication failed - Invalid credentials: {}", ex.getMessage());
+
+        return createErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "Invalid username or password"
+        );
+    }
+
+    /**
+     * Handle other WebClient errors (400, 404, 500, etc.)
+     * MUST come before generic Exception handler
+     */
+    @ExceptionHandler(WebClientResponseException.class)
+    public Mono<ResponseEntity<Map<String, Object>>> handleWebClientException(
+            WebClientResponseException ex) {
+        log.error("WebClient error - Status {}: {}", ex.getStatusCode(), ex.getMessage());
+
+        // Convert HttpStatusCode to HttpStatus
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+
+        return createErrorResponse(
+                status,
+                "EXTERNAL_SERVICE_ERROR",
+                "Error communicating with authentication service"
+        );
+    }
+
+
+    /**
      * Handle all other unexpected exceptions
      * This is the catch-all handler (must be last)
      */
     @ExceptionHandler(Exception.class)
     public Mono<ResponseEntity<Map<String, Object>>> handleGenericException(Exception ex) {
-        // Only log if not already handled by specific handlers above
         log.error("Unexpected error: {}", ex.getMessage(), ex);
 
         return createErrorResponse(
