@@ -2,8 +2,7 @@ package com.shikshaspace.userservice.service;
 
 import com.shikshaspace.userservice.dto.request.LoginRequest;
 import com.shikshaspace.userservice.dto.request.RegisterRequest;
-import com.shikshaspace.userservice.dto.response.UserResponse;
-import com.shikshaspace.userservice.mapper.UserMapper;
+import com.shikshaspace.userservice.dto.response.AuthResponse;  // ← Added
 import com.shikshaspace.userservice.security.TokenResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,6 @@ import java.time.Duration;
 public class AuthService {
 
     private final UserService userService;
-    private final UserMapper userMapper;
     private final WebClient.Builder webClientBuilder;
 
     @Value("${keycloak.server-url}")
@@ -38,25 +36,61 @@ public class AuthService {
     @Value("${keycloak.client-secret}")
     private String clientSecret;
 
-    public Mono<UserResponse> register(RegisterRequest request) {
+    /**
+     * Register user and auto-login
+     */
+    public Mono<AuthResponse> register(RegisterRequest request) {
         log.info("Registering new user: {}", request.getUsername());
 
         return userService.registerUser(request)
-                .map(userMapper::toResponse)
-                .doOnSuccess(user -> log.info("User registered: {}", user.getUsername()));
+                .flatMap(user -> {
+                    log.info("User registered: {}", user.getUsername());
+
+                    // Auto-login after registration
+                    return authenticateWithKeycloak(request.getUsername(), request.getPassword())
+                            .map(tokenResponse -> AuthResponse.builder()
+                                    .token(tokenResponse.getAccessToken())
+                                    .refreshToken(tokenResponse.getRefreshToken())
+                                    .expiresIn(tokenResponse.getExpiresIn())
+                                    .userId(user.getId())
+                                    .username(user.getUsername())
+                                    .build());
+                });
     }
 
-    public Mono<TokenResponse> login(LoginRequest request) {
+    /**
+     * Login user
+     */
+    public Mono<AuthResponse> login(LoginRequest request) {
         log.info("Authenticating user: {}", request.getUsername());
 
+        return authenticateWithKeycloak(request.getUsername(), request.getPassword())
+                .flatMap(tokenResponse ->
+                        userService.getUserByUsername(request.getUsername())
+                                .map(user -> AuthResponse.builder()
+                                        .token(tokenResponse.getAccessToken())
+                                        .refreshToken(tokenResponse.getRefreshToken())
+                                        .expiresIn(tokenResponse.getExpiresIn())
+                                        .userId(user.getId())
+                                        .username(user.getUsername())
+                                        .build())
+                                .doOnSuccess(response -> log.info("User logged in: {}", request.getUsername()))
+                                .doOnError(e -> log.error("Login failed for user: {}", request.getUsername(), e))
+                );
+    }
+
+    /**
+     * Authenticate with Keycloak and get tokens
+     */
+    private Mono<TokenResponse> authenticateWithKeycloak(String username, String password) {
         String tokenUrl = keycloakServerUrl + "/realms/" + realm + "/protocol/openid-connect/token";
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "password");
         formData.add("client_id", clientId);
         formData.add("client_secret", clientSecret);
-        formData.add("username", request.getUsername());
-        formData.add("password", request.getPassword());
+        formData.add("username", username);
+        formData.add("password", password);
 
         return webClientBuilder.build()
                 .post()
@@ -65,12 +99,11 @@ public class AuthService {
                 .bodyValue(formData)
                 .retrieve()
                 .bodyToMono(TokenResponse.class)
-                .doOnSuccess(token -> log.info("User logged in: {}", request.getUsername()))
-                .doOnError(e -> log.error("Login failed for user: {}", request.getUsername(), e));
+                .timeout(Duration.ofSeconds(10));
     }
 
     /**
-     * Refresh access token using refresh token
+     * Refresh access token
      */
     public Mono<TokenResponse> refreshAccessToken(String refreshToken) {
         log.info("Refreshing access token");
