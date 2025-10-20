@@ -12,35 +12,35 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class KeycloakConfig {
 
-    @Value("${keycloak.server-url}")
-    private String serverUrl;
+  @Value("${keycloak.server-url}")
+  private String serverUrl;
 
-    @Value("${keycloak.realm}")
-    private String realm;
+  @Value("${keycloak.realm}")
+  private String realm;
 
-    @Value("${keycloak.client-id}")
-    private String clientId;
+  @Value("${keycloak.client-id}")
+  private String clientId;
 
-    @Value("${keycloak.client-secret}")
-    private String clientSecret;
+  @Value("${keycloak.client-secret}")
+  private String clientSecret;
 
-    @Value("${keycloak.admin.username}")
-    private String adminUsername;
+  @Value("${keycloak.admin.username}")
+  private String adminUsername;
 
-    @Value("${keycloak.admin.password}")
-    private String adminPassword;
+  @Value("${keycloak.admin.password}")
+  private String adminPassword;
 
-    @Bean
-    public Keycloak keycloak() {
-        log.info("Initializing Keycloak Admin Client for realm: {}", realm);
+  @Bean
+  public Keycloak keycloak() {
+    log.info("Initializing Keycloak Admin Client for realm: {}", realm);
 
-        return KeycloakBuilder.builder()
-                .serverUrl(serverUrl)
-                .realm(realm)
-                .clientId("admin-cli")
-                .grantType(OAuth2Constants.PASSWORD)
-                .username(adminUsername)
-                .password(adminPassword)
-                .build();
-    }
+    return KeycloakBuilder.builder()
+        .serverUrl(serverUrl)
+        .realm(realm)
+        .clientId("admin-cli")
+        .grantType(OAuth2Constants.PASSWORD)
+        .username(adminUsername)
+        .password(adminPassword)
+        .build();
+  }
 }

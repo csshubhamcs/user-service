@@ -15,9 +15,9 @@ import org.springframework.transaction.ReactiveTransactionManager;
 @EnableR2dbcAuditing
 public class R2dbcConfig {
 
-    @Bean
-    public ReactiveTransactionManager transactionManager(ConnectionFactory connectionFactory) {
-        log.info("Initializing R2DBC transaction manager");
-        return new R2dbcTransactionManager(connectionFactory);
-    }
+  @Bean
+  public ReactiveTransactionManager transactionManager(ConnectionFactory connectionFactory) {
+    log.info("Initializing R2DBC transaction manager");
+    return new R2dbcTransactionManager(connectionFactory);
+  }
 }

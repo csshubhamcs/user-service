@@ -10,23 +10,23 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class FlywayConfig {
 
-    @Value("${spring.flyway.url}")
-    private String flywayUrl;
+  @Value("${spring.flyway.url}")
+  private String flywayUrl;
 
-    @Value("${spring.flyway.user}")
-    private String flywayUser;
+  @Value("${spring.flyway.user}")
+  private String flywayUser;
 
-    @Value("${spring.flyway.password}")
-    private String flywayPassword;
+  @Value("${spring.flyway.password}")
+  private String flywayPassword;
 
-    @Bean(initMethod = "migrate")
-    public Flyway flyway() {
-        log.info("Initializing Flyway migrations");
+  @Bean(initMethod = "migrate")
+  public Flyway flyway() {
+    log.info("Initializing Flyway migrations");
 
-        return Flyway.configure()
-                .dataSource(flywayUrl, flywayUser, flywayPassword)
-                .baselineOnMigrate(true)
-                .locations("classpath:db/migration")
-                .load();
-    }
+    return Flyway.configure()
+        .dataSource(flywayUrl, flywayUser, flywayPassword)
+        .baselineOnMigrate(true)
+        .locations("classpath:db/migration")
+        .load();
+  }
 }

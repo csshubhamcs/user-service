@@ -9,10 +9,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    // check later need or not
-    @Bean
-    public WebClient.Builder webClientBuilder() {
-        log.info("Initializing WebClient builder");
-        return WebClient.builder();
-    }
+  // check later need or not
+  @Bean
+  public WebClient.Builder webClientBuilder() {
+    log.info("Initializing WebClient builder");
+    return WebClient.builder();
+  }
 }

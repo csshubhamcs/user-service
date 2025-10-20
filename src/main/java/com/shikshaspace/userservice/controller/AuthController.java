@@ -3,7 +3,7 @@ package com.shikshaspace.userservice.controller;
 import com.shikshaspace.userservice.dto.request.LoginRequest;
 import com.shikshaspace.userservice.dto.request.RefreshTokenRequest;
 import com.shikshaspace.userservice.dto.request.RegisterRequest;
-import com.shikshaspace.userservice.dto.response.AuthResponse;  // ← Changed
+import com.shikshaspace.userservice.dto.response.AuthResponse; // ← Changed
 import com.shikshaspace.userservice.security.TokenResponse;
 import com.shikshaspace.userservice.service.AuthService;
 import jakarta.validation.Valid;
@@ -20,32 +20,34 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
+  private final AuthService authService;
 
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public Mono<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {  // ← Changed
-        log.debug("Register request for username: {}", request.getUsername());
-        return authService.register(request);
-    }
+  @PostMapping("/register")
+  @ResponseStatus(HttpStatus.CREATED)
+  public Mono<AuthResponse> register(@Valid @RequestBody RegisterRequest request) { // ← Changed
+    log.debug("Register request for username: {}", request.getUsername());
+    return authService.register(request);
+  }
 
-    @PostMapping("/login")
-    public Mono<AuthResponse> login(@Valid @RequestBody LoginRequest request) {  // ← Changed
-        log.debug("Login request for username: {}", request.getUsername());
-        return authService.login(request);
-    }
+  @PostMapping("/login")
+  public Mono<AuthResponse> login(@Valid @RequestBody LoginRequest request) { // ← Changed
+    log.debug("Login request for username: {}", request.getUsername());
+    return authService.login(request);
+  }
 
-    @PostMapping("/refresh")
-    public Mono<ResponseEntity<TokenResponse>> refreshToken(
-            @Valid @RequestBody RefreshTokenRequest request) {
+  @PostMapping("/refresh")
+  public Mono<ResponseEntity<TokenResponse>> refreshToken(
+      @Valid @RequestBody RefreshTokenRequest request) {
 
-        log.info("Token refresh request received");
+    log.info("Token refresh request received");
 
-        return authService.refreshAccessToken(request.getRefreshToken())
-                .map(ResponseEntity::ok)
-                .onErrorResume(error -> {
-                    log.error("Token refresh failed: {}", error.getMessage());
-                    return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
-                });
-    }
+    return authService
+        .refreshAccessToken(request.getRefreshToken())
+        .map(ResponseEntity::ok)
+        .onErrorResume(
+            error -> {
+              log.error("Token refresh failed: {}", error.getMessage());
+              return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+            });
+  }
 }
