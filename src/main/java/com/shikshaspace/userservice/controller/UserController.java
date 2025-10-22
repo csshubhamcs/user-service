@@ -1,14 +1,18 @@
 package com.shikshaspace.userservice.controller;
 
+import com.shikshaspace.userservice.dto.request.RegisterExternalRequest;
 import com.shikshaspace.userservice.dto.request.UpdateProfileRequest;
+import com.shikshaspace.userservice.dto.response.AuthResponse;
 import com.shikshaspace.userservice.dto.response.UserResponse;
 import com.shikshaspace.userservice.mapper.UserMapper;
+import com.shikshaspace.userservice.service.AuthService;
 import com.shikshaspace.userservice.service.UserService;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +32,7 @@ public class UserController {
 
   private final UserService userService;
   private final UserMapper userMapper;
+  private final AuthService authService;
 
   /** Get all users (Admin only) */
   @GetMapping
@@ -127,6 +132,34 @@ public class UserController {
   public Mono<Void> deleteUser(@PathVariable UUID id) {
     log.debug("Deleting user ID: {}", id);
     return userService.deleteUser(id).doOnSuccess(v -> log.info("User deleted: {}", id));
+  }
+
+  @PostMapping("/register-external")
+  public Mono<ResponseEntity<AuthResponse>> registerExternal(
+      @Valid @RequestBody RegisterExternalRequest request,
+      @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) { // Ensure token provided
+
+    log.debug("External register request for: {}", request.getUsername());
+
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+      return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    String accessToken = authHeader.substring(7);
+
+    return authService
+        .registerExternal(request, accessToken)
+        .map(ResponseEntity::ok)
+        .onErrorResume(
+            error -> {
+              if (error.getMessage().contains("already exists")) {
+                log.warn("External user already exists: {}", request.getUsername());
+                return Mono.just(
+                    ResponseEntity.status(HttpStatus.CONFLICT).body(null)); // Or custom error body
+              }
+              log.error("External registration error: {}", error.getMessage());
+              return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
+            });
   }
 
   /**

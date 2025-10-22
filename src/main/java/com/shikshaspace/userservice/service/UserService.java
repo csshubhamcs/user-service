@@ -1,6 +1,7 @@
 package com.shikshaspace.userservice.service;
 
 import com.shikshaspace.userservice.domain.User;
+import com.shikshaspace.userservice.dto.request.RegisterExternalRequest;
 import com.shikshaspace.userservice.dto.request.RegisterRequest;
 import com.shikshaspace.userservice.dto.request.UpdateProfileRequest;
 import com.shikshaspace.userservice.exception.UserNotFoundException;
@@ -113,5 +114,41 @@ public class UserService {
                     .then(userRepository.deleteById(id))
                     .doOnSuccess(v -> log.info("User deleted successfully: {}", id))
                     .doOnError(e -> log.error("Error deleting user: {}", e.getMessage(), e)));
+  }
+
+  @Transactional
+  public Mono<User> registerExternalUser(RegisterExternalRequest request) {
+    log.info("Registering external user: {}", request.getUsername());
+
+    // Check for existing (email or username)
+    return Mono.zip(
+            userRepository.findByEmail(request.getEmail()),
+            userRepository.findByUsername(request.getUsername()))
+        .flatMap(
+            existing ->
+                existing.getT1() != null || existing.getT2() != null
+                    ? Mono.error(
+                        new IllegalArgumentException(
+                            "User already exists with this email or username"))
+                    : Mono.just(existing))
+        .then( // No existing, proceed
+            Mono.defer(
+                () -> {
+                  User user =
+                      userMapper.toEntityExternal(
+                          request); // Assume mapper has toEntityExternal (no password); or manual:
+                  // user.setUsername(request.getUsername()), etc.
+                  user.setKeycloakId(request.getKeycloakId());
+                  user.setCreatedAt(LocalDateTime.now());
+                  user.setUpdatedAt(LocalDateTime.now());
+                  user.setEmailVerified(true); // External providers verify email
+
+                  return userRepository
+                      .save(user)
+                      .doOnSuccess(
+                          u -> log.info("External user registered successfully: {}", u.getId()))
+                      .doOnError(
+                          e -> log.error("Error saving external user: {}", e.getMessage(), e));
+                }));
   }
 }

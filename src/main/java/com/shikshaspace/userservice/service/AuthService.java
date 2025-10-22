@@ -1,6 +1,7 @@
 package com.shikshaspace.userservice.service;
 
 import com.shikshaspace.userservice.dto.request.LoginRequest;
+import com.shikshaspace.userservice.dto.request.RegisterExternalRequest;
 import com.shikshaspace.userservice.dto.request.RegisterRequest;
 import com.shikshaspace.userservice.dto.response.AuthResponse; // ← Added
 import com.shikshaspace.userservice.security.TokenResponse;
@@ -129,5 +130,32 @@ public class AuthService {
         .timeout(Duration.ofSeconds(10))
         .doOnSuccess(response -> log.info("Access token refreshed successfully"))
         .doOnError(error -> log.error("Failed to refresh token: {}", error.getMessage()));
+  }
+
+  public Mono<AuthResponse> registerExternal(RegisterExternalRequest request, String accessToken) {
+    log.info("Registering external user in DB: {}", request.getUsername());
+
+    // Assume accessToken is valid Keycloak token; extract expiresIn from it if needed (or fixed
+    // 3600s)
+    // For refreshToken: Not available in handler; set null or fetch via Keycloak introspection
+    // (optional)
+
+    return userService
+        .registerExternalUser(request)
+        .map(
+            user ->
+                AuthResponse.builder()
+                    .token(accessToken)
+                    .refreshToken(
+                        null) // External: No refresh (session-based); implement introspection if
+                    // needed
+                    .expiresIn(3600L) // Default 1h; parse from token if JWT lib available
+                    .userId(user.getId())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .build())
+        .doOnSuccess(
+            response -> log.info("External registration successful: {}", request.getUsername()))
+        .doOnError(e -> log.error("External registration failed: {}", request.getUsername(), e));
   }
 }

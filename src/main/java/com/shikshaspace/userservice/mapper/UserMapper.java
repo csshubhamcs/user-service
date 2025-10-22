@@ -1,6 +1,7 @@
 package com.shikshaspace.userservice.mapper;
 
 import com.shikshaspace.userservice.domain.User;
+import com.shikshaspace.userservice.dto.request.RegisterExternalRequest;
 import com.shikshaspace.userservice.dto.request.RegisterRequest;
 import com.shikshaspace.userservice.dto.request.UpdateProfileRequest;
 import com.shikshaspace.userservice.dto.response.UserResponse;
@@ -22,6 +23,12 @@ public interface UserMapper {
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
   User toEntity(RegisterRequest request);
+
+  @Mapping(target = "id", ignore = true)
+  @Mapping(target = "isActive", constant = "true")
+  @Mapping(target = "createdAt", ignore = true)
+  @Mapping(target = "updatedAt", ignore = true)
+  User toEntityExternal(RegisterExternalRequest request);
 
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "keycloakId", ignore = true)

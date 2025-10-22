@@ -23,6 +23,7 @@ public class User {
   private String email;
   private String firstName;
   private String lastName;
+  private Boolean emailVerified;
 
   private Integer age;
   private String bio;
