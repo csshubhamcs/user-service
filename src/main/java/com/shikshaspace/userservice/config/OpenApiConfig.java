@@ -10,6 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * OpenAPI documentation configuration for API explorer. Enables Swagger UI with JWT authentication
+ * support.
+ */
 @Slf4j
 @Configuration
 public class OpenApiConfig {

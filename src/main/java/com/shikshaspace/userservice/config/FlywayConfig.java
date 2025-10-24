@@ -6,6 +6,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Database migration configuration using Flyway. Ensures schema versioning and consistency across
+ * environments.
+ */
 @Slf4j
 @Configuration
 public class FlywayConfig {
@@ -21,12 +25,14 @@ public class FlywayConfig {
 
   @Bean(initMethod = "migrate")
   public Flyway flyway() {
-    log.info("Initializing Flyway migrations");
+    log.info("Initializing Flyway migrations for database schema management");
 
     return Flyway.configure()
         .dataSource(flywayUrl, flywayUser, flywayPassword)
         .baselineOnMigrate(true)
         .locations("classpath:db/migration")
+        .validateOnMigrate(true)
+        .cleanDisabled(true) // Production safety: disable clean command
         .load();
   }
 }

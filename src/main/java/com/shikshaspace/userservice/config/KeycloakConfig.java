@@ -8,6 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Keycloak Admin Client configuration for user management operations. Uses service account
+ * credentials for administrative tasks.
+ */
 @Slf4j
 @Configuration
 public class KeycloakConfig {
@@ -30,6 +34,10 @@ public class KeycloakConfig {
   @Value("${keycloak.admin.password}")
   private String adminPassword;
 
+  /**
+   * Creates Keycloak admin client for user and realm management. Uses admin credentials with
+   * sufficient privileges.
+   */
   @Bean
   public Keycloak keycloak() {
     log.info("Initializing Keycloak Admin Client for realm: {}", realm);

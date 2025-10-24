@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** Response DTO for user data. Excludes sensitive information like password. */
 @Data
 @Builder
 @NoArgsConstructor
@@ -18,15 +19,12 @@ public class UserResponse {
   private String email;
   private String firstName;
   private String lastName;
-
   private Integer age;
   private String bio;
   private Double experience;
-
   private String profileImageUrl;
   private String linkedinUrl;
   private String githubUrl;
-
   private Boolean isActive;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;

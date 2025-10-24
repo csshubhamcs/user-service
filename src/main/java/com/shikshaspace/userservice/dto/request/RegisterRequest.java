@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** Request DTO for user registration with username/password. */
 @Data
 @Builder
 @NoArgsConstructor

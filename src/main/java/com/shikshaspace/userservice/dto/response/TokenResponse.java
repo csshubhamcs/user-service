@@ -1,4 +1,4 @@
-package com.shikshaspace.userservice.security;
+package com.shikshaspace.userservice.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** Response DTO for Keycloak OAuth2 token endpoint. */
 @Data
 @Builder
 @NoArgsConstructor

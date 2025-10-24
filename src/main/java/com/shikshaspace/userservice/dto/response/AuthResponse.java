@@ -6,15 +6,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** Response DTO for authentication operations. Contains JWT tokens and user information. */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthResponse {
-  private String token; // access_token from Keycloak
-  private String refreshToken; // refresh_token from Keycloak
-  private Long expiresIn; // expires_in from Keycloak
-  private UUID userId; // from database
-  private String username; // from database
+
+  private String token;
+  private String refreshToken;
+  private Long expiresIn;
+  private UUID userId;
+  private String username;
   private String email;
 }

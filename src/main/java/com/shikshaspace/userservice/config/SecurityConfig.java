@@ -20,34 +20,36 @@ import org.springframework.security.oauth2.server.resource.authentication.Reacti
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import reactor.core.publisher.Mono;
 
+/**
+ * Security configuration for JWT-based authentication with Keycloak. Configures OAuth2 resource
+ * server and role-based access control.
+ */
 @Slf4j
 @Configuration
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity
 public class SecurityConfig {
 
+  private static final String[] PUBLIC_ENDPOINTS = {
+    "/api/auth/**", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**"
+  };
+
+  /** Configures HTTP security with JWT validation and endpoint authorization. */
   @Bean
   public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
-    log.info("Configuring security filter chain");
+    log.info("Configuring security filter chain with JWT authentication");
 
     return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
         .authorizeExchange(
             exchanges ->
-                exchanges
-                    .pathMatchers("/api/auth/**")
-                    .permitAll()
-                    .pathMatchers("/actuator/**")
-                    .permitAll()
-                    .pathMatchers("/swagger-ui/**", "/v3/api-docs/**", "/webjars/**")
-                    .permitAll()
-                    .anyExchange()
-                    .authenticated())
+                exchanges.pathMatchers(PUBLIC_ENDPOINTS).permitAll().anyExchange().authenticated())
         .oauth2ResourceServer(
             oauth2 ->
                 oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(grantedAuthoritiesExtractor())))
         .build();
   }
 
+  /** Extracts roles from Keycloak JWT token and converts to Spring Security authorities. */
   @Bean
   public Converter<Jwt, Mono<AbstractAuthenticationToken>> grantedAuthoritiesExtractor() {
     JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
@@ -55,10 +57,12 @@ public class SecurityConfig {
     return new ReactiveJwtAuthenticationConverterAdapter(jwtAuthenticationConverter);
   }
 
+  /** Custom converter to extract roles from Keycloak realm_access claim. */
   static class KeycloakRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
     @Override
     public Collection<GrantedAuthority> convert(Jwt jwt) {
       Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+
       if (realmAccess == null || !realmAccess.containsKey("roles")) {
         return List.of();
       }
