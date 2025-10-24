@@ -7,8 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Database migration configuration using Flyway. Ensures schema versioning and consistency across
- * environments.
+ * Production-ready Flyway configuration for database migrations. Handles schema versioning and
+ * migration management.
  */
 @Slf4j
 @Configuration
@@ -29,10 +29,11 @@ public class FlywayConfig {
 
     return Flyway.configure()
         .dataSource(flywayUrl, flywayUser, flywayPassword)
-        .baselineOnMigrate(true)
         .locations("classpath:db/migration")
-        .validateOnMigrate(true)
-        .cleanDisabled(true) // Production safety: disable clean command
+        .baselineOnMigrate(true) // Handle existing databases gracefully
+        .validateOnMigrate(true) // Validate migrations
+        .outOfOrder(false) // Enforce migration order
+        .cleanDisabled(true) // Prevent accidental data loss
         .load();
   }
 }
